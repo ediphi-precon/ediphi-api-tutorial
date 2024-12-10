@@ -6,17 +6,15 @@
 
 ### Purpose
 
-At ediphi we believe all of your preconstruction data should be accessible to you on demand so that you can use it in your other business systems. This repository serves as a tutorial for using our API via external endpoints, where our "data pipeline" can return just about anything within your database.
+At ediphi we believe all of your preconstruction data should be accessible to you on demand so that you can use it in your other business systems. This repository serves as a tutorial for using our API via external endpoints, where data.ediphi.com can return just about anything within your database.
 
 ### Getting Started
 
-First you will need an API key, reach out to your ediphi contact to receive one and keep it safe. We [bcrpyt](https://en.wikipedia.org/wiki/Bcrypt) our API keys and once we issue them we cannot recover them. They are visible to us only at the time of creation, and then sent to you securely typically by encrypted email. After receiving you API key follow these steps:
+First you will need an API key and database number. Reach out to your ediphi contact to receive these and keep them safe. We [bcrpyt](https://en.wikipedia.org/wiki/Bcrypt) our API keys and once we issue them we cannot recover them. They are visible to us only at the time of creation, and then sent to you securely typically by encrypted email. After receiving your API key and database number follow these steps:
 
-1.  Once you receive your API key, copy the .env.example file to a .env file and enter in the `API_KEY` and `TENANT`. Assuming you are on Windows and your terminal is at the root directory of this repository, run:
+1.  Once you receive your API key and database number, copy the .env.example file to a .env file and enter in the `X_API_KEY` and `DATABASE_NO`. Assuming you are on Windows and your terminal is at the root directory of this repository, run:
 
         copy .env.example .env
-
-The tenant is the subdomain of the url used to access the application. So `https://{tenant}.ediphi.com`
 
 2.  Create a virtual env if you wish, but the the requirements are quite lean for this tutorial, so it may not be required. Activate the virtual environment first if you are using one, and then to install requirements run:
 
