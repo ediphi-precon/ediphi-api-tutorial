@@ -151,7 +151,7 @@ class Database:
         +----+---------------------+-----------------+--------------------------+---------+---------+--------------------+---------------------+
         """
 
-        with open("data_dictionary.sql", "r") as dd:
+        with open("./queries/data_dictionary.sql", "r") as dd:
             query = dd.read()
         if table_name:
             query += f" where c.table_name = '{table_name}' or cf.references_table = '{table_name}'"
@@ -212,15 +212,7 @@ class Database:
         if 0 not in properties.keys():
             properties = {0: "".join([f" and {k}={v}" for k, v in properties.items()])}
         if table_name in self.tables.keys():
-            res, result, idx = (
-                [
-                    1,
-                ],
-                [
-                    1,
-                ],
-                0,
-            )
+            res, result, idx = (1,1,0)
             if limit:
                 if 0 < limit < chunk_limit:
                     init_query = f"select * from {table_name} where deleted_at is null {properties[0]} order by {pk} asc limit {limit}"
@@ -267,6 +259,11 @@ class Database:
                 "The table_name you entered does not exist in the database"
             )
 
+    def get_line_items_for_estimate(self, estimate_id):
+        ...
+
+    def get_upc(self):
+        ...
 
 # -----------------------------------------------------------------------
 # Table class
