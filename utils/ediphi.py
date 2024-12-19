@@ -212,7 +212,7 @@ class Database:
         if 0 not in properties.keys():
             properties = {0: "".join([f" and {k}={v}" for k, v in properties.items()])}
         if table_name in self.tables.keys():
-            res, result, idx = ('init','init',0)
+            res, result, idx = ("init", "init", 0)
             if limit:
                 if 0 < limit < chunk_limit:
                     init_query = f"select * from {table_name} where deleted_at is null {properties[0]} order by {pk} asc limit {limit}"
@@ -259,11 +259,10 @@ class Database:
                 "The table_name you entered does not exist in the database"
             )
 
-    def get_line_items_for_estimate(self, estimate_id):
-        ...
+    def get_line_items_for_estimate(self, estimate_id): ...
 
-    def get_upc(self):
-        ...
+    def get_upc(self): ...
+
 
 # -----------------------------------------------------------------------
 # Estimate class
@@ -290,7 +289,7 @@ class Estimate(Database):
     estimate_id : string (uuid)
     add_cols : list, default: []
     estimate_name : string
-    lines : dataframe of the base columns from the line_items table 
+    lines : dataframe of the base columns from the line_items table
     expanded_lines : dataframe from the line_items table incluing expanded sorts resulting from the expand_estimate_lines method
     uf_levels : list of integers - uniformat levels that exist within the estimate
     mf_levels : list of integers - masterformat levels that exist within the estimate
@@ -308,24 +307,41 @@ class Estimate(Database):
         super().__init__()
         self.estimate_id = estimate_id
         self.add_cols = add_cols
-        self.estimate_name = self.query(f"select name from estimates where id = '{self.estimate_id}'")[0]['name']
+        self.estimate_name = self.query(
+            f"select name from estimates where id = '{self.estimate_id}'"
+        )[0]["name"]
         self.lines = self._get_lines()
         self.expanded_lines = None
-        self.uf_levels = self._get_csi_levels('uf')
-        self.mf_levels = self._get_csi_levels('mf')
+        self.uf_levels = self._get_csi_levels("uf")
+        self.mf_levels = self._get_csi_levels("mf")
 
     def _get_lines(self):
         """
         Private method for estimate to get its own lines
         """
 
-        update = {'__ADD_COLS__': '\n'.join(map(lambda x: f'    ,{x}', self.add_cols)), '__ESTIMATE_ID__': self.estimate_id}
-        with open('./queries/base_estimate_lines.sql', 'r') as q:
-            query=q.read()
-            for i,j in update.items():
-                query = query.replace(i,j)
+        update = {
+            "__ADD_COLS__": "\n".join(map(lambda x: f"    ,{x}", self.add_cols)),
+            "__ESTIMATE_ID__": self.estimate_id,
+        }
+        with open("./queries/base_estimate_lines.sql", "r") as q:
+            query = q.read()
+            for i, j in update.items():
+                query = query.replace(i, j)
         df = self.query(query=query, df=True)
-        cols = ['id', 'name',  'quantity', 'uom', 'total_uc', 'mf1_code', 'mf2_code', 'mf3_code', 'uf1_code', 'uf2_code', 'uf3_code'] + self.add_cols
+        cols = [
+            "id",
+            "name",
+            "quantity",
+            "uom",
+            "total_uc",
+            "mf1_code",
+            "mf2_code",
+            "mf3_code",
+            "uf1_code",
+            "uf2_code",
+            "uf3_code",
+        ] + self.add_cols
         return df[cols]
 
     def _get_csi_levels(self, schema):
@@ -333,13 +349,17 @@ class Estimate(Database):
         Private method for estimate to get its own csi levels
         """
 
-        levels_query = "select " +\
-            f"array(select distinct replace(jsonb_object_keys({schema}), '{schema}', '')::int " +\
-            "from line_items " +\
-            f"where estimate = '{self.estimate_id}')"
-        return eval(self.query(levels_query)[0]['array'])
-    
-    def describe_csi_sorts(self, df=None, schemas:list=['mf','uf'], levels:list=None):
+        levels_query = (
+            "select "
+            + f"array(select distinct replace(jsonb_object_keys({schema}), '{schema}', '')::int "
+            + "from line_items "
+            + f"where estimate = '{self.estimate_id}')"
+        )
+        return eval(self.query(levels_query)[0]["array"])
+
+    def describe_csi_sorts(
+        self, df=None, schemas: list = ["mf", "uf"], levels: list = None
+    ):
         """
         Method to add the descriptions for each csi code (masterformat and uniformat) to the lines dataframe
 
@@ -375,35 +395,50 @@ class Estimate(Database):
         |  4 | Stainless Stl Door FOB                          |          1 | ea    | C1030      | Interior Doors     |
         +----+-------------------------------------------------+------------+-------+------------+--------------------+
         """
+
         def unpack_csi_json(schema, levels):
-            root = 'jsonb_array_elements(value)'
+            root = "jsonb_array_elements(value)"
             elems = []
             for level in levels:
                 if level == 1:
-                    elem = root 
+                    elem = root
                 else:
-                    elem = "jsonb_array_elements("*(level-1) + root + " ->'children')"*(level-1)
+                    elem = (
+                        "jsonb_array_elements(" * (level - 1)
+                        + root
+                        + " ->'children')" * (level - 1)
+                    )
                 elems.append(f"{elem} ->> 'code' {schema}{level}_code")
                 elems.append(f"{elem} ->> 'description' {schema}{level}_desc")
-            return 'select\n   ' + ''.join(map(lambda x: f'{x}\n  ,', elems[:-1])) + elems[-1] + f"\nfrom setup s\nwhere key = 'sort_codes:{schema}'"
-        if any([i not in ['mf','uf'] for i in schemas]) or (type(schemas) != list):
-            raise ValueError('Schema must be type list, and may contain mf, uf, or both')        
+            return (
+                "select\n   "
+                + "".join(map(lambda x: f"{x}\n  ,", elems[:-1]))
+                + elems[-1]
+                + f"\nfrom setup s\nwhere key = 'sort_codes:{schema}'"
+            )
+
+        if any([i not in ["mf", "uf"] for i in schemas]) or (type(schemas) != list):
+            raise ValueError(
+                "Schema must be type list, and may contain mf, uf, or both"
+            )
         if all([(type(levels) != list), levels is not None]):
-            raise ValueError('Levels must be type list (or None to use all levels)')        
+            raise ValueError("Levels must be type list (or None to use all levels)")
         df = self.lines if df is None else df
         cols = list(df.columns)
         for schema in schemas:
             if levels is None:
-                levels = self.mf_levels if schema == 'mf' else self.uf_levels
+                levels = self.mf_levels if schema == "mf" else self.uf_levels
             query = unpack_csi_json(schema, levels)
             df_csi = self.query(query=query, df=True)
             for n in levels:
-                df_csi_l = df_csi[[f'{schema}{n}_code', f'{schema}{n}_desc']].drop_duplicates()
-                df = df.merge(df_csi_l, on=f'{schema}{n}_code', how='left')
-                idx = cols.index(f'{schema}{n}_code')
-                cols.insert(idx+1, f'{schema}{n}_desc')
+                df_csi_l = df_csi[
+                    [f"{schema}{n}_code", f"{schema}{n}_desc"]
+                ].drop_duplicates()
+                df = df.merge(df_csi_l, on=f"{schema}{n}_code", how="left")
+                idx = cols.index(f"{schema}{n}_code")
+                cols.insert(idx + 1, f"{schema}{n}_desc")
         return df[cols]
-    
+
     def get_custom_sorts(self, df=None, sorts=None):
         """
         Method to add the codes and descriptions for each custom sort to the lines dataframe
@@ -438,19 +473,26 @@ class Estimate(Database):
         |  4 | Subcontract - Exterior Insulation & Finish System |          1 | ls    |               7.24 | Exterior Insulation & Finish Systems |
         +----+---------------------------------------------------+------------+-------+--------------------+--------------------------------------+
         """
-        with open('./queries/sorts_estimate.sql', 'r') as q:
-            df_cs = self.query(query=q.read().replace('__ESTIMATE_ID__',  str(self.estimate_id)), df=True)
-        sorts = sorts if sorts else df_cs['code_name'].drop_duplicates().to_list()
+        with open("./queries/sorts_estimate.sql", "r") as q:
+            df_cs = self.query(
+                query=q.read().replace("__ESTIMATE_ID__", str(self.estimate_id)),
+                df=True,
+            )
+        sorts = sorts if sorts else df_cs["code_name"].drop_duplicates().to_list()
         df = self.lines if df is None else df
         cols = list(df.columns)
         for sort in sorts:
-            df_cs_l = df_cs.loc[df_cs['code_name'] == sort, ['id', 'code', 'description']].drop_duplicates()
-            df_cs_l.columns = ['id', f'{sort}_code', f'{sort}_desc']
-            df = df.merge(df_cs_l, on='id', how='left')
-            cols+=[f'{sort}_code', f'{sort}_desc']
+            df_cs_l = df_cs.loc[
+                df_cs["code_name"] == sort, ["id", "code", "description"]
+            ].drop_duplicates()
+            df_cs_l.columns = ["id", f"{sort}_code", f"{sort}_desc"]
+            df = df.merge(df_cs_l, on="id", how="left")
+            cols += [f"{sort}_code", f"{sort}_desc"]
         return df[cols]
-    
-    def expand_estimate_lines(self, schemas:list=['mf','uf'], levels:list=None, sorts=None):
+
+    def expand_estimate_lines(
+        self, schemas: list = ["mf", "uf"], levels: list = None, sorts=None
+    ):
         """
         Method to add the descriptions for each csi code (masterformat and uniformat), as well as the codes and descriptions for each custom sort to the lines dataframe
 
@@ -490,7 +532,8 @@ class Estimate(Database):
         df = self.describe_csi_sorts(schemas=schemas, levels=levels)
         self.expanded_lines = self.get_custom_sorts(df=df, sorts=sorts)
         return self.expanded_lines
-    
+
+
 # -----------------------------------------------------------------------
 # UPC class
 
@@ -510,7 +553,7 @@ class UPC(Database):
     Attributes
     ----------
     add_cols : list, default: []
-    lines : dataframe of the base columns from the line_items table 
+    lines : dataframe of the base columns from the line_items table
     expanded_lines : dataframe from the line_items table incluing expanded sorts resulting from the expand_estimate_lines method
     uf_levels : list of integers - uniformat levels that exist within the estimate
     mf_levels : list of integers - masterformat levels that exist within the estimate
@@ -529,21 +572,31 @@ class UPC(Database):
         self.add_cols = add_cols
         self.lines = self._get_lines()
         self.expanded_lines = None
-        self.uf_levels = self._get_csi_levels('uf')
-        self.mf_levels = self._get_csi_levels('mf')
+        self.uf_levels = self._get_csi_levels("uf")
+        self.mf_levels = self._get_csi_levels("mf")
 
     def _get_lines(self):
         """
         Private method for upc to get its own lines
         """
 
-        update = {'__ADD_COLS__': '\n'.join(map(lambda x: f'    ,{x}', self.add_cols))}
-        with open('./queries/base_upc.sql', 'r') as q:
-            query=q.read()
-            for i,j in update.items():
-                query = query.replace(i,j)
+        update = {"__ADD_COLS__": "\n".join(map(lambda x: f"    ,{x}", self.add_cols))}
+        with open("./queries/base_upc.sql", "r") as q:
+            query = q.read()
+            for i, j in update.items():
+                query = query.replace(i, j)
         df = self.query(query=query, df=True)
-        cols = ['id', 'name', 'uom', 'mf1_code', 'mf2_code', 'mf3_code', 'uf1_code', 'uf2_code', 'uf3_code'] + self.add_cols
+        cols = [
+            "id",
+            "name",
+            "uom",
+            "mf1_code",
+            "mf2_code",
+            "mf3_code",
+            "uf1_code",
+            "uf2_code",
+            "uf3_code",
+        ] + self.add_cols
         return df[cols]
 
     def _get_csi_levels(self, schema):
@@ -551,12 +604,16 @@ class UPC(Database):
         Private method for upc to get its own csi levels
         """
 
-        levels_query = "select " +\
-            f"array(select distinct replace(jsonb_object_keys({schema}), '{schema}', '')::int res " +\
-            "from products order by res)"
-        return eval(self.query(levels_query)[0]['array'])
-    
-    def describe_csi_sorts(self, df=None, schemas:list=['mf','uf'], levels:list=None):
+        levels_query = (
+            "select "
+            + f"array(select distinct replace(jsonb_object_keys({schema}), '{schema}', '')::int res "
+            + "from products order by res)"
+        )
+        return eval(self.query(levels_query)[0]["array"])
+
+    def describe_csi_sorts(
+        self, df=None, schemas: list = ["mf", "uf"], levels: list = None
+    ):
         """
         Method to add the descriptions for each csi code (masterformat and uniformat) to the lines dataframe
 
@@ -592,35 +649,50 @@ class UPC(Database):
         |  4 | Glass Premium - Ceramic Frit (Ext)    | sf    | B2020      | Exterior Windows            |
         +----+---------------------------------------+-------+------------+-----------------------------+
         """
+
         def unpack_csi_json(schema, levels):
-            root = 'jsonb_array_elements(value)'
+            root = "jsonb_array_elements(value)"
             elems = []
             for level in levels:
                 if level == 1:
-                    elem = root 
+                    elem = root
                 else:
-                    elem = "jsonb_array_elements("*(level-1) + root + " ->'children')"*(level-1)
+                    elem = (
+                        "jsonb_array_elements(" * (level - 1)
+                        + root
+                        + " ->'children')" * (level - 1)
+                    )
                 elems.append(f"{elem} ->> 'code' {schema}{level}_code")
                 elems.append(f"{elem} ->> 'description' {schema}{level}_desc")
-            return 'select\n   ' + ''.join(map(lambda x: f'{x}\n  ,', elems[:-1])) + elems[-1] + f"\nfrom setup s\nwhere key = 'sort_codes:{schema}'"
-        if any([i not in ['mf','uf'] for i in schemas]) or (type(schemas) != list):
-            raise ValueError('Schema must be type list, and may contain mf, uf, or both')        
+            return (
+                "select\n   "
+                + "".join(map(lambda x: f"{x}\n  ,", elems[:-1]))
+                + elems[-1]
+                + f"\nfrom setup s\nwhere key = 'sort_codes:{schema}'"
+            )
+
+        if any([i not in ["mf", "uf"] for i in schemas]) or (type(schemas) != list):
+            raise ValueError(
+                "Schema must be type list, and may contain mf, uf, or both"
+            )
         if all([(type(levels) != list), levels is not None]):
-            raise ValueError('Levels must be type list (or None to use all levels)')        
+            raise ValueError("Levels must be type list (or None to use all levels)")
         df = self.lines if df is None else df
         cols = list(df.columns)
         for schema in schemas:
             if levels is None:
-                levels = self.mf_levels if schema == 'mf' else self.uf_levels
+                levels = self.mf_levels if schema == "mf" else self.uf_levels
             query = unpack_csi_json(schema, levels)
             df_csi = self.query(query=query, df=True)
             for n in levels:
-                df_csi_l = df_csi[[f'{schema}{n}_code', f'{schema}{n}_desc']].drop_duplicates()
-                df = df.merge(df_csi_l, on=f'{schema}{n}_code', how='left')
-                idx = cols.index(f'{schema}{n}_code')
-                cols.insert(idx+1, f'{schema}{n}_desc')
+                df_csi_l = df_csi[
+                    [f"{schema}{n}_code", f"{schema}{n}_desc"]
+                ].drop_duplicates()
+                df = df.merge(df_csi_l, on=f"{schema}{n}_code", how="left")
+                idx = cols.index(f"{schema}{n}_code")
+                cols.insert(idx + 1, f"{schema}{n}_desc")
         return df[cols]
-    
+
     def get_custom_sorts(self, df=None, sorts=None):
         """
         Method to add the codes and descriptions for each custom sort to the lines dataframe
@@ -655,19 +727,23 @@ class UPC(Database):
         |  4 | Project Executive (Precon)                              | hr    |               99   | Preconstruction                          |
         +----+---------------------------------------------------------+-------+--------------------+------------------------------------------+
         """
-        with open('./queries/sorts_upc.sql', 'r') as q:
+        with open("./queries/sorts_upc.sql", "r") as q:
             df_cs = self.query(query=q.read(), df=True)
-        sorts = sorts if sorts else df_cs['code_name'].drop_duplicates().to_list()
+        sorts = sorts if sorts else df_cs["code_name"].drop_duplicates().to_list()
         df = self.lines if df is None else df
         cols = list(df.columns)
         for sort in sorts:
-            df_cs_l = df_cs.loc[df_cs['code_name'] == sort, ['id', 'code', 'description']].drop_duplicates()
-            df_cs_l.columns = ['id', f'{sort}_code', f'{sort}_desc']
-            df = df.merge(df_cs_l, on='id', how='left')
-            cols+=[f'{sort}_code', f'{sort}_desc']
+            df_cs_l = df_cs.loc[
+                df_cs["code_name"] == sort, ["id", "code", "description"]
+            ].drop_duplicates()
+            df_cs_l.columns = ["id", f"{sort}_code", f"{sort}_desc"]
+            df = df.merge(df_cs_l, on="id", how="left")
+            cols += [f"{sort}_code", f"{sort}_desc"]
         return df[cols]
-    
-    def expand_upc_lines(self, schemas:list=['mf','uf'], levels:list=None, sorts=None):
+
+    def expand_upc_lines(
+        self, schemas: list = ["mf", "uf"], levels: list = None, sorts=None
+    ):
         """
         Method to add the descriptions for each csi code (masterformat and uniformat), as well as the codes and descriptions for each custom sort to the lines dataframe
 
@@ -707,6 +783,7 @@ class UPC(Database):
         df = self.describe_csi_sorts(schemas=schemas, levels=levels)
         self.expanded_lines = self.get_custom_sorts(df=df, sorts=sorts)
         return self.expanded_lines
+
 
 # -----------------------------------------------------------------------
 # Table class
