@@ -259,10 +259,6 @@ class Database:
                 "The table_name you entered does not exist in the database"
             )
 
-    def get_line_items_for_estimate(self, estimate_id): ...
-
-    def get_upc(self): ...
-
 
 # -----------------------------------------------------------------------
 # Estimate class
