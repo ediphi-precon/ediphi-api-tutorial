@@ -8,4 +8,5 @@ select
 	,(p.mf ->> 'mf1') mf1_code
 	,(p.mf ->> 'mf2') mf2_code
 	,(p.mf ->> 'mf3') mf3_code
+__ADD_COLS__
 from products p
