@@ -286,7 +286,7 @@ class Estimate(Database):
     add_cols : list, default: []
     estimate_name : string
     lines : dataframe of the base columns from the line_items table
-    expanded_lines : dataframe from the line_items table incluing expanded sorts resulting from the expand_estimate_lines method
+    expanded_lines : dataframe from the line_items table including expanded sorts resulting from the expand_estimate_lines method
     uf_levels : list of integers - uniformat levels that exist within the estimate
     mf_levels : list of integers - masterformat levels that exist within the estimate
 
@@ -550,7 +550,7 @@ class UPC(Database):
     ----------
     add_cols : list, default: []
     lines : dataframe of the base columns from the line_items table
-    expanded_lines : dataframe from the line_items table incluing expanded sorts resulting from the expand_estimate_lines method
+    expanded_lines : dataframe from the line_items table including expanded sorts resulting from the expand_estimate_lines method
     uf_levels : list of integers - uniformat levels that exist within the estimate
     mf_levels : list of integers - masterformat levels that exist within the estimate
 
