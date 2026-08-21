@@ -8,6 +8,12 @@
 
 At ediphi we believe all of your preconstruction data should be accessible to you on demand so that you can use it in your other business systems. This repository serves as a tutorial for using our API via external endpoints, where data.ediphi.com can return just about anything within your database.
 
+### Documentation
+
+- **[Interactive API docs (Swagger UI)](https://ediphi-precon.github.io/ediphi-api-tutorial/)** — browse every `/api/external` endpoint, see request/response shapes, and try live calls from your browser. Hosted via GitHub Pages from the [`docs/`](docs/) folder.
+- **[External API reference](docs/external-api.md)** — a written reference for the External API: authentication, the base URL, and every endpoint (projects, vendors, vendor contacts, estimates, users, opportunities, employees) with its parameters, request bodies, and pagination/filtering rules. Also covers the separate `data.ediphi.com` Data API, which runs read-only SQL against your tenant's lookup tables.
+- **[Estimate ETL guide](docs/etl.md)** — a platform-agnostic walkthrough for building an ETL pipeline: load lookup tables from the Data API, fetch detailed estimates from the External API, enrich the data with Python/Pandas, and load it into any data warehouse (Snowflake, BigQuery, Redshift, Fabric, etc.).
+
 ### Getting Started
 
 First you will need an API key and database number. Reach out to your ediphi contact to receive these and keep them safe. We [bcrpyt](https://en.wikipedia.org/wiki/Bcrypt) our API keys and once we issue them we cannot recover them. They are visible to us only at the time of creation, and then sent to you securely typically by encrypted email. After receiving your API key and database number follow these steps:

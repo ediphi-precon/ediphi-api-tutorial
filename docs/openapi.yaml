@@ -1,0 +1,504 @@
+openapi: 3.0.3
+info:
+  title: Ediphi External API
+  version: "1.0.0"
+  description: >
+    Ediphi external API. All requests require the `api-tenant` and `api-token`
+    headers. All tenants share the same base URL; the tenant is identified by
+    the `api-tenant` header, not the URL.
+servers:
+  - url: https://api.ediphi.com/api/external
+    description: Production
+security:
+  - apiTenant: []
+    apiToken: []
+tags:
+  - name: Projects
+  - name: Vendors
+  - name: Vendor Contacts
+  - name: Estimates
+  - name: Users
+  - name: Opportunities
+  - name: Employees
+  - name: Data API
+paths:
+  /projects:
+    get:
+      tags: [Projects]
+      summary: List projects
+      description: >
+        Returns projects with their estimates. Does not support page/limit/order/dir
+        or the search filter; use the query parameters below.
+      parameters:
+        - { name: from, in: query, required: false, schema: { type: string, format: date }, description: Projects created on/after this date (ISO 8601). }
+        - { name: to, in: query, required: false, schema: { type: string, format: date }, description: Projects created on/before this date (ISO 8601). }
+        - { name: opportunity_number, in: query, required: false, schema: { type: string }, description: Exact CRM opportunity number. }
+        - { name: name, in: query, required: false, schema: { type: string }, description: Case-insensitive partial match on project name. }
+      responses:
+        "200":
+          description: List of projects with estimates.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        project: { type: object }
+                        estimates: { type: array, items: { type: object } }
+        "403": { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Projects]
+      summary: Create project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProjectCreate' }
+      responses:
+        "200":
+          description: Created project.
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { type: object } } }
+        "400": { $ref: '#/components/responses/BadRequest' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+  /projects/{id}:
+    put:
+      tags: [Projects]
+      summary: Update project
+      description: >
+        Updates an existing project. Only these fields are applied; others are
+        ignored: name, owner, phase, industry, region, client_name, address,
+        task_number, opportunity, city, state, zip.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProjectUpdate' }
+      responses:
+        "200":
+          description: Updated project.
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { type: object } } }
+        "400": { $ref: '#/components/responses/BadRequest' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+  /vendors:
+    get:
+      tags: [Vendors]
+      summary: List vendors
+      description: Supports pagination, sorting, and the search filter.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Order'
+        - $ref: '#/components/parameters/Dir'
+        - name: search
+          in: query
+          required: false
+          style: form
+          explode: true
+          description: >
+            Repeatable filter, format `column;operator;value`. Allowed columns:
+            created_at, updated_at. Operators: >=, >, <, <= with a date value (YYYY-MM-DD).
+          schema:
+            type: array
+            items: { type: string }
+          example: ["created_at;>=;2024-01-01", "created_at;<=;2024-12-31"]
+      responses:
+        "200": { description: Paginated list of vendors. }
+        "400": { $ref: '#/components/responses/BadRequest' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+  /vendors/{id}:
+    get:
+      tags: [Vendors]
+      summary: Get single vendor
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: The vendor.
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { type: object } } }
+        "404": { $ref: '#/components/responses/NotFound' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+  /vendors/batch:
+    put:
+      tags: [Vendors]
+      summary: Batch upsert vendors
+      description: Create or update up to 200 vendors and 200 contacts (total).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VendorBatchUpsert' }
+      responses:
+        "200":
+          description: Processed vendors with contacts.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vendors: { type: array, items: { type: object } }
+        "400": { $ref: '#/components/responses/BadRequest' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [Vendors]
+      summary: Batch delete vendors
+      description: Delete vendors and/or vendor contacts by UUID. At least one non-empty array required.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VendorBatchDelete' }
+      responses:
+        "204": { description: Deleted. No content. }
+        "400": { $ref: '#/components/responses/BadRequest' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+  /vendor_contacts:
+    get:
+      tags: [Vendor Contacts]
+      summary: List vendor contacts
+      description: Supports pagination, sorting, and the search filter.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Order'
+        - $ref: '#/components/parameters/Dir'
+        - name: search
+          in: query
+          required: false
+          style: form
+          explode: true
+          description: >
+            Repeatable filter, format `column;operator;value`. Allowed columns:
+            created_at, updated_at (date operators >=, >, <, <=); vendor, prequal_id
+            (operator =, UUID value). Use vendor OR prequal_id, not both.
+          schema:
+            type: array
+            items: { type: string }
+          example: ["vendor;=;3f4c0000-0000-4000-8000-000000000000"]
+      responses:
+        "200": { description: Paginated list of vendor contacts. }
+        "400": { $ref: '#/components/responses/BadRequest' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+  /vendor_contacts/{id}:
+    get:
+      tags: [Vendor Contacts]
+      summary: Get single vendor contact
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: The vendor contact.
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { type: object } } }
+        "404": { $ref: '#/components/responses/NotFound' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+  /estimates/{id}:
+    get:
+      tags: [Estimates]
+      summary: Get estimate
+      description: Returns a detailed serialized estimate.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Serialized estimate.
+          content:
+            application/json:
+              schema: { type: object, properties: { sanitizedEstimate: { type: object } } }
+        "400": { $ref: '#/components/responses/BadRequest' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      description: Returns users in your tenant. No pagination.
+      responses:
+        "200":
+          description: Users.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      users:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: string, format: uuid }
+                            full_name: { type: string }
+                            email: { type: string }
+                            admin: { type: boolean }
+                            created_at: { type: string, format: date-time }
+                            updated_at: { type: string, format: date-time }
+        "403": { $ref: '#/components/responses/Forbidden' }
+  /opportunities:
+    get:
+      tags: [Opportunities]
+      summary: List opportunities
+      description: Returns CRM opportunities linked to projects. No pagination.
+      responses:
+        "200": { description: Opportunities. }
+        "403": { $ref: '#/components/responses/Forbidden' }
+  /opportunities/sync:
+    put:
+      tags: [Opportunities]
+      summary: Sync CRM data
+      description: Upsert CRM opportunities. Body is a JSON array; items without opty_number are skipped. Set delete=true on an item to remove it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: '#/components/schemas/OpportunitySyncItem' }
+      responses:
+        "200": { description: Sync summary. }
+        "400": { $ref: '#/components/responses/BadRequest' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+  /crm/{opportunityNumber}:
+    get:
+      tags: [Opportunities]
+      summary: Get opportunity by number
+      description: Retrieves a CRM opportunity with its processed project/estimate data.
+      parameters:
+        - { name: opportunityNumber, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Processed opportunity data. }
+        "400": { $ref: '#/components/responses/BadRequest' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+  /employees/erm_batch:
+    put:
+      tags: [Employees]
+      summary: Batch upsert employees (ERM)
+      description: >
+        Batch create/update employee records. Body is a JSON array. Employees not
+        updated today are marked inactive before the batch is applied.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: '#/components/schemas/EmployeeErmRecord' }
+      responses:
+        "200":
+          description: Upserted employees.
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { type: array, items: { type: object } } } }
+        "400": { $ref: '#/components/responses/BadRequest' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+  /api/dataset/json:
+    post:
+      tags: [Data API]
+      summary: Query data (native SQL)
+      description: >
+        Data API (data.ediphi.com) — read-only native SQL access to your tenant's
+        reference/lookup tables. This is a SEPARATE service from the endpoints above:
+        a different host (https://data.ediphi.com) and `X-API-KEY` auth instead of the
+        `api-tenant` / `api-token` headers. Commonly used to load lookup tables
+        (regions, use_groups, setup, sort_fields, sort_codes, users, opportunities,
+        projects, estimates) for ETL pipelines.
+      servers:
+        - url: https://data.ediphi.com
+      security:
+        - dataApiKey: []
+          databaseId: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query:
+                  type: string
+                  description: >
+                    A JSON object sent as the form field `query`, with fields:
+                    `database` (your Database ID), `type` (always "native"), and
+                    `native.query` (the SQL string).
+                  example: '{"database":"your_db_id","type":"native","native":{"query":"SELECT id, name, category FROM regions WHERE deleted_at IS NULL"}}'
+      responses:
+        "200":
+          description: Array of row objects (shape depends on the SQL query).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+        "403": { $ref: '#/components/responses/Forbidden' }
+components:
+  securitySchemes:
+    apiTenant:
+      type: apiKey
+      in: header
+      name: api-tenant
+    apiToken:
+      type: apiKey
+      in: header
+      name: api-token
+    dataApiKey:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+    databaseId:
+      type: apiKey
+      in: query
+      name: database
+      description: >
+        Your Database ID for the Data API. In actual requests it is sent inside the
+        form-encoded `query` payload as the `database` field (see the request body).
+        It is listed here so you can store it in Authorize alongside your Data API key.
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      schema: { type: integer, default: 1, minimum: 1 }
+      description: Page number (starts at 1).
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema: { type: integer, default: 100 }
+      description: Items per page.
+    Order:
+      name: order
+      in: query
+      required: false
+      schema: { type: string, default: created_at }
+      description: Field to sort by.
+    Dir:
+      name: dir
+      in: query
+      required: false
+      schema: { type: string, enum: [asc, desc], default: desc }
+      description: Sort direction.
+  responses:
+    BadRequest:
+      description: Invalid parameters or payload.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Invalid API key or tenant.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: boolean, example: true }
+        data: { type: string, example: "Error message describing what went wrong" }
+    ProjectCreate:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        region: { type: string, format: uuid, description: Existing region UUID. }
+        owner: { type: string, format: uuid, description: Existing user UUID. }
+        opportunity: { type: string, format: uuid, description: Existing opportunity UUID. }
+        industry: { type: string, description: Existing industry name in the tenant. }
+        phase: { type: string, enum: [IN_REVIEW, ACTIVE, ATTENTION, WAITING] }
+    ProjectUpdate:
+      type: object
+      description: Only these fields are applied; others are ignored.
+      properties:
+        name: { type: string }
+        owner: { type: string, format: uuid }
+        phase: { type: string, enum: [IN_REVIEW, ACTIVE, ATTENTION, WAITING] }
+        industry: { type: string }
+        region: { type: string, format: uuid }
+        client_name: { type: string }
+        address: { type: string }
+        task_number: { type: string }
+        opportunity: { type: string, format: uuid }
+        city: { type: string }
+        state: { type: string }
+        zip: { type: string }
+    VendorBatchUpsert:
+      type: object
+      required: [vendors]
+      properties:
+        vendors:
+          type: array
+          maxItems: 200
+          items:
+            type: object
+            required: [contractor_name]
+            properties:
+              id: { type: string, format: uuid, description: Omit to create. }
+              contractor_name: { type: string }
+              contacts:
+                type: array
+                items: { $ref: '#/components/schemas/VendorContactInput' }
+    VendorContactInput:
+      type: object
+      required: [first_name, last_name, email, mobile, address_1, city, state, zip]
+      properties:
+        id: { type: string, format: uuid, description: Omit to create. }
+        first_name: { type: string }
+        last_name: { type: string }
+        email: { type: string }
+        mobile: { type: string }
+        address_1: { type: string }
+        city: { type: string }
+        state: { type: string }
+        zip: { type: string }
+        regions: { type: array, items: { type: string }, description: Region names. }
+        bid_packages: { type: array, items: { type: string }, description: Bid package codes. }
+    VendorBatchDelete:
+      type: object
+      description: Provide vendor_ids and/or vendor_contact_ids; at least one non-empty.
+      properties:
+        vendor_ids: { type: array, items: { type: string, format: uuid } }
+        vendor_contact_ids: { type: array, items: { type: string, format: uuid } }
+    OpportunitySyncItem:
+      type: object
+      required: [opty_number]
+      properties:
+        opty_number: { type: string }
+        name: { type: string }
+        opty_creation_date: { type: string }
+        account_name: { type: string }
+        owner_name: { type: string }
+        architectaccountname_c: { type: string }
+        project_address1: { type: string }
+        project_address2: { type: string }
+        project_city: { type: string }
+        project_state: { type: string }
+        project_postal_code: { type: string }
+        delete: { type: boolean, description: Set true to remove this opportunity. }
+    EmployeeErmRecord:
+      type: object
+      required: [EMPLOYEE_NUMBER]
+      properties:
+        EMPLOYEE_NUMBER: { type: string }
+        EMPLOYEE_NAME: { type: string }
+        EMPLOYEE_OFFICE_LOCATION: { type: string, description: Matched to a region by name. }
+        EMPLOYEE_JOB_TITLE: { type: string }
