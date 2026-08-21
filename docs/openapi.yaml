@@ -319,6 +319,7 @@ paths:
         - url: https://data.ediphi.com
       security:
         - dataApiKey: []
+          databaseId: []
       requestBody:
         required: true
         content:
@@ -359,6 +360,14 @@ components:
       type: apiKey
       in: header
       name: X-API-KEY
+    databaseId:
+      type: apiKey
+      in: query
+      name: database
+      description: >
+        Your Database ID for the Data API. In actual requests it is sent inside the
+        form-encoded `query` payload as the `database` field (see the request body).
+        It is listed here so you can store it in Authorize alongside your Data API key.
   parameters:
     Page:
       name: page
