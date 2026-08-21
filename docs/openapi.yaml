@@ -20,6 +20,7 @@ tags:
   - name: Users
   - name: Opportunities
   - name: Employees
+  - name: Data API
 paths:
   /projects:
     get:
@@ -303,6 +304,47 @@ paths:
               schema: { type: object, properties: { data: { type: array, items: { type: object } } } }
         "400": { $ref: '#/components/responses/BadRequest' }
         "403": { $ref: '#/components/responses/Forbidden' }
+  /api/dataset/json:
+    post:
+      tags: [Data API]
+      summary: Query data (native SQL)
+      description: >
+        Data API (data.ediphi.com) — read-only native SQL access to your tenant's
+        reference/lookup tables. This is a SEPARATE service from the endpoints above:
+        a different host (https://data.ediphi.com) and `X-API-KEY` auth instead of the
+        `api-tenant` / `api-token` headers. Commonly used to load lookup tables
+        (regions, use_groups, setup, sort_fields, sort_codes, users, opportunities,
+        projects, estimates) for ETL pipelines.
+      servers:
+        - url: https://data.ediphi.com
+      security:
+        - dataApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query:
+                  type: string
+                  description: >
+                    A JSON object sent as the form field `query`, with fields:
+                    `database` (your Database ID), `type` (always "native"), and
+                    `native.query` (the SQL string).
+                  example: '{"database":"your_db_id","type":"native","native":{"query":"SELECT id, name, category FROM regions WHERE deleted_at IS NULL"}}'
+      responses:
+        "200":
+          description: Array of row objects (shape depends on the SQL query).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+        "403": { $ref: '#/components/responses/Forbidden' }
 components:
   securitySchemes:
     apiTenant:
@@ -313,6 +355,10 @@ components:
       type: apiKey
       in: header
       name: api-token
+    dataApiKey:
+      type: apiKey
+      in: header
+      name: X-API-KEY
   parameters:
     Page:
       name: page
