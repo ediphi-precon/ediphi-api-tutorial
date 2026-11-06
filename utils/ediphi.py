@@ -19,6 +19,18 @@ def main():
 # Database class
 
 
+
+def _parse_levels(value):
+    """
+    Normalize a postgres int array returned by the Data API into a sorted list.
+    The API may return a JSON list, a postgres array literal string like "{1,2}", or None.
+    """
+    if value is None:
+        return []
+    if isinstance(value, str):
+        value = [v for v in value.strip("{}[]").split(",") if v.strip()]
+    return sorted(int(v) for v in value)
+
 class Database:
     """
     Database instance for a tenant.
@@ -351,7 +363,7 @@ class Estimate(Database):
             + "from line_items "
             + f"where estimate = '{self.estimate_id}')"
         )
-        return eval(self.query(levels_query)[0]["array"])
+        return _parse_levels(self.query(levels_query)[0]["array"])
 
     def describe_csi_sorts(
         self, df=None, schemas: list = ["mf", "uf"], levels: list = None
@@ -605,7 +617,7 @@ class UPC(Database):
             + f"array(select distinct replace(jsonb_object_keys({schema}), '{schema}', '')::int res "
             + "from products order by res)"
         )
-        return eval(self.query(levels_query)[0]["array"])
+        return _parse_levels(self.query(levels_query)[0]["array"])
 
     def describe_csi_sorts(
         self, df=None, schemas: list = ["mf", "uf"], levels: list = None
