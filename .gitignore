@@ -52,3 +52,7 @@ secrets*
 # testing #
 ######################
 test_records/
+
+# venv #
+######################
+venv/
